@@ -1,575 +1,981 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
-
-<title>Managers Performance Dashboard</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cash Position Analyzer</title>
 <script src="https://cdn.jsdelivr.net/gh/tableau/extensions-api/lib/tableau.extensions.1.latest.js"></script>
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
-
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet">
-
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* ════════════════════════════════════════════════════
+   TOKENS
+════════════════════════════════════════════════════ */
+:root {
+  --red:        #c8102e;
+  --red-dark:   #a00d24;
+  --red-glow:   rgba(200,16,46,.15);
+  --gold:       #e6a817;
+  --text:       #0f1c2e;
+  --text-mid:   #4a5568;
+  --text-soft:  #8a96a8;
+  --border:     rgba(15,28,46,.08);
+  --border-mid: rgba(15,28,46,.12);
+  --font:       'Outfit', sans-serif;
 
-/* ════════════════════════════════
-   ROOT
-════════════════════════════════ */
-:root{
-  --red:#c8102e;
-  --gold:#e6a817;
-  --text:#102033;
-  --soft:#6b7280;
-  --border:#e6e8ec;
-  --bg:#ffffff;
-  --shadow:0 2px 10px rgba(0,0,0,.06);
-  --font:'Outfit',sans-serif;
+  /* Solid white card — clean against #f4f6f9 dashboard */
+  --glass-bg:   #ffffff;
+  --glass-blur: 0px;
+  --glass-border: rgba(15,28,46,.09);
+
+  --h-nav:  58px;
+  --radius: 10px;
+  --ease:   cubic-bezier(.16,1,.3,1);
 }
 
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: visible;           /* allow filter panel to overflow below */
+  font-family: var(--font);
+  background: transparent;
+  -webkit-font-smoothing: antialiased;
+  color: var(--text);
 }
 
-html,
-body{
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  background:transparent;
-  font-family:var(--font);
-}
-
-/* ════════════════════════════════
+/* ════════════════════════════════════════════════════
    NAVBAR
-════════════════════════════════ */
-.navbar{
-  width:100%;
-  height:60px;
-  background:#fff;
-  border-bottom:1px solid var(--border);
-  display:flex;
-  align-items:center;
-  padding:0 16px;
-  gap:14px;
-  position:relative;
-  box-shadow:var(--shadow);
+════════════════════════════════════════════════════ */
+.navbar {
+  position: relative;
+  width: 100%;
+  height: var(--h-nav);
+  background: var(--glass-bg);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: 0 2px 8px rgba(15,28,46,.06), 0 1px 0 rgba(15,28,46,.04);
+  display: flex;
+  align-items: center;
+  padding: 0 18px 0 14px;
+  gap: 0;
+  z-index: 100;
 }
 
-.navbar::before{
-  content:'';
-  position:absolute;
-  top:0;
-  left:0;
-  right:0;
-  height:3px;
-  background:linear-gradient(
-    90deg,
-    var(--red),
-    #f13b54,
-    var(--gold)
-  );
+/* Red/gold top accent */
+.navbar::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2.5px;
+  background: linear-gradient(90deg, var(--red) 0%, #e8364f 45%, var(--gold) 100%);
 }
 
-/* LOGO */
-.logo-wrap{
-  display:flex;
-  align-items:center;
-  padding-right:14px;
-  border-right:1px solid var(--border);
+/* ── LOGO ── */
+.logo-wrap {
+  display: flex; align-items: center;
+  flex-shrink: 0;
+  padding-right: 16px;
+  border-right: 1px solid var(--border-mid);
+  height: 34px;
 }
 
-.logo{
-  height:28px;
+.logo-img {
+  height: 26px; width: auto;
+  display: block;
+  mix-blend-mode: multiply;
+  filter: contrast(1.08) saturate(1.1);
 }
 
-/* TITLE */
-.title-wrap{
-  display:flex;
-  flex-direction:column;
-  min-width:240px;
+.logo-fallback {
+  display: none;
+  font-size: 15px; font-weight: 700;
+  color: var(--red);
 }
 
-.title{
-  font-size:15px;
-  font-weight:700;
-  color:var(--text);
+/* ── TITLE ── */
+.title-wrap {
+  display: flex; flex-direction: column;
+  padding: 0 16px; flex-shrink: 0;
+}
+.title-main {
+  font-size: 13px; font-weight: 600;
+  color: var(--text);
+  letter-spacing: -.15px; line-height: 1.2;
+  white-space: nowrap;
+}
+.title-sub {
+  font-size: 9.5px; font-weight: 400;
+  color: var(--text-soft);
+  letter-spacing: .4px;
+  text-transform: uppercase; margin-top: 1px;
 }
 
-.subtitle{
-  font-size:10px;
-  color:var(--soft);
-  text-transform:uppercase;
-  letter-spacing:.5px;
+/* ── V-DIVIDER ── */
+.vdiv {
+  width: 1px; height: 26px;
+  background: var(--border-mid);
+  flex-shrink: 0;
 }
 
-/* NAV */
-.nav-links{
-  display:flex;
-  align-items:center;
-  gap:6px;
+/* ── NAV LINKS ── */
+.nav-links {
+  display: flex; align-items: center;
+  gap: 1px; padding: 0 12px;
+  height: 100%;
 }
 
-.nav-btn{
-  height:34px;
-  border:none;
-  background:none;
-  padding:0 14px;
-  border-radius:8px;
-  font-size:12px;
-  font-weight:600;
-  cursor:pointer;
-  color:#4b5563;
-  transition:.2s;
+.nav-btn {
+  position: relative;
+  display: flex; align-items: center; gap: 5px;
+  height: 34px; padding: 0 12px;
+  border-radius: 7px;
+  font-size: 12.5px; font-weight: 500;
+  color: var(--text-mid);
+  cursor: pointer;
+  border: none; background: none;
+  font-family: var(--font);
+  letter-spacing: -.1px;
+  user-select: none;
+  transition: background .16s, color .16s;
+  white-space: nowrap;
+}
+.nav-btn svg { width: 14px; height: 14px; opacity: .6; transition: opacity .16s; flex-shrink: 0; }
+.nav-btn:hover { background: rgba(15,28,46,.05); color: var(--text); }
+.nav-btn:hover svg { opacity: 1; }
+.nav-btn.active { color: var(--red); font-weight: 600; background: var(--red-glow); }
+.nav-btn.active svg { opacity: 1; color: var(--red); }
+.nav-btn.active::after {
+  content: '';
+  position: absolute; bottom: -1px; left: 12px; right: 12px;
+  height: 2px; background: var(--red);
+  border-radius: 2px 2px 0 0;
 }
 
-.nav-btn:hover{
-  background:#f3f4f6;
+/* ── FILTER TRIGGER ── */
+.filter-btn {
+  display: flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 12px;
+  border-radius: 7px;
+  font-size: 12px; font-weight: 500;
+  color: var(--text-mid);
+  cursor: pointer;
+  border: 1px solid var(--border-mid);
+  background: rgba(255,255,255,.5);
+  font-family: var(--font);
+  transition: all .18s;
+  white-space: nowrap;
+  user-select: none;
+  flex-shrink: 0;
+}
+.filter-btn:hover { background: rgba(255,255,255,.85); border-color: rgba(15,28,46,.18); color: var(--text); }
+.filter-btn.open  { background: var(--red-glow); border-color: rgba(200,16,46,.3); color: var(--red); }
+.filter-btn svg   { width: 14px; height: 14px; transition: transform .25s var(--ease); }
+.filter-btn.open svg.chevron { transform: rotate(180deg); }
+
+/* Active filter indicator dot */
+.filter-btn .f-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--red);
+  display: none; flex-shrink: 0;
+}
+.filter-btn.has-filter .f-dot { display: block; }
+
+/* Active filter breadcrumb chip */
+.filter-chip {
+  display: none;
+  align-items: center; gap: 5px;
+  height: 24px; padding: 0 8px 0 10px;
+  border-radius: 20px;
+  background: var(--red-glow);
+  border: 1px solid rgba(200,16,46,.2);
+  font-size: 11px; font-weight: 600;
+  color: var(--red);
+  white-space: nowrap;
+  max-width: 180px; overflow: hidden; text-overflow: ellipsis;
+  cursor: default;
+}
+.filter-chip.visible { display: flex; }
+.filter-chip-x {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: rgba(200,16,46,.15); border: none;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--red); font-weight: 700;
+  flex-shrink: 0; font-family: var(--font);
+  transition: background .14s;
+}
+.filter-chip-x:hover { background: rgba(200,16,46,.3); }
+
+/* ── SPACER ── */
+.spacer { flex: 1; }
+
+/* ── RIGHT: CLOCK + USER ── */
+.right-wrap { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+.clock-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
+.clock-time { font-size: 12.5px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -.2px; line-height: 1; }
+.clock-date { font-size: 9.5px; color: var(--text-soft); letter-spacing: .2px; margin-top: 1px; }
+
+.user-chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 3px 10px 3px 3px;
+  border-radius: 30px;
+  background: var(--bg-dash, #f4f6f9);
+  border: 1px solid var(--glass-border);
+  cursor: default; max-width: 200px;
+  transition: box-shadow .18s;
+}
+.user-chip:hover { box-shadow: 0 2px 10px rgba(15,28,46,.08); }
+
+.avatar-wrap { position: relative; flex-shrink: 0; }
+.avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--red);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff;
+  overflow: hidden; border: 1.5px solid rgba(200,16,46,.2);
+}
+.avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+.status-dot {
+  position: absolute; bottom: 0; right: 0;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #22c55e; border: 1.5px solid rgba(255,255,255,.8);
 }
 
-.nav-btn.active{
-  background:rgba(200,16,46,.1);
-  color:var(--red);
+.user-info { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.user-name  { font-size: 11.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; line-height: 1.2; }
+.user-role  { font-size: 9.5px; color: var(--text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+
+/* Skeleton */
+.skel { background: linear-gradient(90deg,#eef0f3 25%,#e4e6ea 50%,#eef0f3 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 4px; }
+.skel-name { width: 80px; height: 9px; }
+.skel-role { width: 55px; height: 7px; margin-top: 3px; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ════════════════════════════════════════════════════
+   FILTER PANEL — floats below navbar
+════════════════════════════════════════════════════ */
+.filter-panel {
+  position: absolute;
+  top: var(--h-nav);
+  left: 0; right: 0;
+
+  background: #ffffff;
+  border: 1px solid rgba(15,28,46,.09);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 8px 24px rgba(15,28,46,.10);
+
+  padding: 0;
+  overflow: hidden;
+
+  /* Animate open/close */
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition: max-height .38s var(--ease), opacity .28s var(--ease), transform .3s var(--ease);
+  z-index: 99;
+}
+.filter-panel.open {
+  max-height: 58px;
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0);
+}
+.filter-panel::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--red), var(--gold));
+  border-radius: 0 0 0 12px;
 }
 
-/* FILTERS */
-.filter-wrap{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  margin-left:10px;
+.fp-inner {
+  padding: 10px 16px 10px;
+  display: flex;
+  align-items: center;
+  gap: 0;
 }
 
-.select{
-  height:34px;
-  min-width:180px;
-  border:1px solid var(--border);
-  border-radius:8px;
-  padding:0 12px;
-  font-family:var(--font);
-  font-size:12px;
-  outline:none;
-  background:#fff;
+/* Drill-down trail */
+.drill-trail {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+  min-width: 0;
 }
 
-.select:focus{
-  border-color:var(--red);
+/* Each drill step */
+.drill-step {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+  opacity: 0;
+  transform: translateX(12px);
+  pointer-events: none;
+  max-width: 0;
+  overflow: hidden;
+  transition:
+    opacity .3s var(--ease),
+    transform .3s var(--ease),
+    max-width .35s var(--ease);
+}
+.drill-step.visible {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: all;
+  max-width: 260px;
 }
 
-/* SPACER */
-.spacer{
-  flex:1;
+/* Arrow between steps */
+.drill-arrow {
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  width: 0; overflow: hidden;
+  opacity: 0;
+  transition: width .3s var(--ease), opacity .25s;
+  color: var(--text-soft);
+  align-items: center;
 }
+.drill-arrow.visible { width: 28px; opacity: 1; }
+.drill-arrow svg { width: 14px; height: 14px; }
 
-/* RIGHT */
-.right-wrap{
-  display:flex;
-  align-items:center;
-  gap:14px;
+/* Step label — hidden in compact mode */
+.step-label { display: none; }
+.step-label-dot { display: none; }
+
+/* Select dropdown */
+.drill-select {
+  height: 28px;
+  min-width: 160px; max-width: 220px;
+  padding: 0 30px 0 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border-mid);
+  background: rgba(255,255,255,.75);
+  color: var(--text);
+  font-size: 12.5px; font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238a96a8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color .18s, box-shadow .18s, background-color .18s;
+  outline: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.drill-select:hover  { border-color: rgba(15,28,46,.22); background-color: rgba(255,255,255,.92); }
+.drill-select:focus  { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-glow); }
+.drill-select.filled { border-color: rgba(200,16,46,.35); color: var(--red); font-weight: 600; }
 
-/* CLOCK */
-.clock{
-  display:flex;
-  flex-direction:column;
-  align-items:flex-end;
+/* Drill-down prompt */
+.drill-prompt {
+  display: none;
+  align-items: center; gap: 8px;
+  padding: 4px 11px;
+  border-radius: 7px;
+  background: rgba(200,16,46,.06);
+  border: 1px dashed rgba(200,16,46,.25);
+  font-size: 11px; font-weight: 500;
+  color: var(--text-mid);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all .18s;
+  margin-top: 0;
+  flex-shrink: 0;
+  height: 28px;
+  align-self: center;
 }
+.drill-prompt:hover { background: var(--red-glow); border-color: rgba(200,16,46,.4); color: var(--red); }
+.drill-prompt.visible { display: flex; }
+.drill-prompt svg { width: 13px; height: 13px; flex-shrink: 0; }
 
-.clock-time{
-  font-size:13px;
-  font-weight:700;
-  color:var(--text);
+/* Reset button */
+.reset-btn {
+  display: none;
+  align-items: center; gap: 5px;
+  height: 28px; padding: 0 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border-mid);
+  background: rgba(255,255,255,.5);
+  color: var(--text-soft);
+  font-size: 11px; font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all .18s;
+  white-space: nowrap;
+  align-self: center;
+  margin-left: 8px;
+  flex-shrink: 0;
 }
+.reset-btn:hover { background: rgba(255,255,255,.85); color: var(--red); border-color: rgba(200,16,46,.25); }
+.reset-btn svg { width: 13px; height: 13px; }
+.reset-btn.visible { display: flex; }
 
-.clock-date{
-  font-size:10px;
-  color:var(--soft);
-}
+/* fp-header removed for compact mode */
 
-/* USER */
-.user-chip{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:4px 12px 4px 4px;
-  border:1px solid var(--border);
-  border-radius:50px;
-  background:#f8fafc;
-}
-
-.avatar{
-  width:32px;
-  height:32px;
-  border-radius:50%;
-  background:var(--red);
-  color:#fff;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:12px;
-  font-weight:700;
-}
-
-.user-info{
-  display:flex;
-  flex-direction:column;
-}
-
-.user-name{
-  font-size:12px;
-  font-weight:600;
-  color:var(--text);
-}
-
-.user-branch{
-  font-size:10px;
-  color:var(--soft);
-}
-
+/* ════════════════════════════════════════════════════
+   ENTRANCE
+════════════════════════════════════════════════════ */
+@keyframes fadeSlide { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:none} }
+.navbar { animation: fadeSlide .35s var(--ease) both; }
 </style>
-
 </head>
-
 <body>
 
+<!-- ══════════════════════════════════════════
+     NAVBAR
+══════════════════════════════════════════ -->
 <nav class="navbar">
 
-  <!-- LOGO -->
+  <!-- Logo -->
   <div class="logo-wrap">
-
-    <img class="logo"
-         src="https://www.combank.lk/assets/images/logo/newlogo.svg">
-
+    <img class="logo-img" id="logoImg"
+      src="https://www.combank.lk/assets/images/logo/newlogo.svg" alt="ComBank"
+      onerror="this.style.display='none';document.getElementById('logoFb').style.display='block'">
+    <span class="logo-fallback" id="logoFb">ComBank</span>
   </div>
 
-  <!-- TITLE -->
-  <div class="title-wrap">
+  <!-- Title -->
+  <div class="title-wrap" style="padding:0 14px;">
+    <div class="title-main">Cash Position Analyzer</div>
+    
+  </div>
 
-    <div class="title">
-      Managers Performance Dashboard
+  <div class="vdiv" style="margin:0 4px"></div>
+
+  <!-- Nav links -->
+  <nav class="nav-links">
+    <button class="nav-btn active" data-page="home" onclick="navTo('home',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </button>
+    <button class="nav-btn" data-page="limits" onclick="navTo('limits',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Limits
+    </button>
+    <button class="nav-btn" data-page="position" onclick="navTo('position',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Position
+    </button>
+  </nav>
+
+  <div class="vdiv" style="margin:0 4px"></div>
+
+  <!-- Filter trigger + active chip -->
+  <div style="display:flex;align-items:center;gap:8px;padding:0 8px;">
+    <button class="filter-btn" id="filterBtn" onclick="toggleFilter()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+      </svg>
+      <span id="filterBtnTxt">Filters</span>
+      <span class="f-dot"></span>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+
+    <!-- Active selection breadcrumb chip -->
+    <div class="filter-chip" id="filterChip">
+      <span id="chipTxt"></span>
+      <button class="filter-chip-x" onclick="resetAll()" title="Clear filter">✕</button>
     </div>
-
-    <div class="subtitle">
-      Commercial Bank of Ceylon PLC
-    </div>
-
-  </div>
-
-  <!-- NAVIGATION -->
-  <div class="nav-links">
-
-    <button class="nav-btn active">
-      Overview
-    </button>
-
-    <button class="nav-btn">
-      Rankings
-    </button>
-
-    <button class="nav-btn">
-      Branches
-    </button>
-
-    <button class="nav-btn">
-      Targets
-    </button>
-
-  </div>
-
-  <!-- FILTERS -->
-  <div class="filter-wrap">
-
-    <select class="select"
-            id="branchFilter">
-
-      <option value="">
-        Select Branch
-      </option>
-
-    </select>
-
-    <select class="select"
-            id="managerFilter">
-
-      <option value="">
-        Select Manager
-      </option>
-
-    </select>
-
   </div>
 
   <div class="spacer"></div>
 
-  <!-- RIGHT -->
+  <!-- Right: clock + user -->
   <div class="right-wrap">
-
-    <!-- CLOCK -->
-    <div class="clock">
-
-      <div class="clock-time"
-           id="clockTime">
-
-        --:--:--
-
-      </div>
-
-      <div class="clock-date"
-           id="clockDate">
-
-        ----
-
-      </div>
-
+    <div class="clock-wrap">
+      <div class="clock-time" id="clockTime">--:--:--</div>
+      <div class="clock-date" id="clockDate">--- -- ----</div>
     </div>
-
-    <!-- USER -->
-    <div class="user-chip">
-
-      <div class="avatar"
-           id="avatar">
-
-        MP
-
+    <div class="vdiv"></div>
+    <div class="user-chip" id="userChip">
+      <div class="avatar-wrap">
+        <div class="avatar" id="avatarEl">
+          <div class="skel" id="avSkel" style="width:100%;height:100%;border-radius:50%"></div>
+        </div>
+        <span class="status-dot"></span>
       </div>
-
       <div class="user-info">
-
-        <div class="user-name"
-             id="managerName">
-
-          Manager
-
-        </div>
-
-        <div class="user-branch"
-             id="branchName">
-
-          Branch
-
-        </div>
-
+        <div class="user-name skel skel-name" id="userName">&nbsp;</div>
+        <div class="user-role skel skel-role" id="userRole">&nbsp;</div>
       </div>
-
     </div>
-
   </div>
-
 </nav>
 
+<!-- ══════════════════════════════════════════
+     FILTER PANEL (floats below navbar)
+══════════════════════════════════════════ -->
+<div class="filter-panel" id="filterPanel">
+
+  <div class="fp-inner">
+    <span style="font-size:10.5px;font-weight:600;color:var(--text-soft);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;margin-right:14px;flex-shrink:0;">Filter by</span>
+
+    <!-- ─ STEP 1: AGM ─ -->
+    <div class="drill-step visible" id="stepAgm">
+      <select class="drill-select" id="selAgm" onchange="onAgmChange()">
+        <option value="">— Select AGM —</option>
+      </select>
+    </div>
+
+    <!-- Arrow 1→2 -->
+    <div class="drill-arrow" id="arrow12">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+
+    <!-- ─ Drill prompt after AGM ─ -->
+    <div class="drill-prompt" id="promptRegion" onclick="drillToRegion()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Drill to Region
+    </div>
+
+    <!-- ─ STEP 2: Region ─ -->
+    <div class="drill-step" id="stepRegion">
+      <select class="drill-select" id="selRegion" onchange="onRegionChange()">
+        <option value="">— Select Region —</option>
+      </select>
+    </div>
+
+    <!-- Arrow 2→3 -->
+    <div class="drill-arrow" id="arrow23">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+
+    <!-- ─ Drill prompt after Region ─ -->
+    <div class="drill-prompt" id="promptBranch" onclick="drillToBranch()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Drill to Branch
+    </div>
+
+    <!-- ─ STEP 3: Branch ─ -->
+    <div class="drill-step" id="stepBranch">
+      <select class="drill-select" id="selBranch" onchange="onBranchChange()">
+        <option value="">— Select Branch —</option>
+      </select>
+    </div>
+
+    <!-- Reset -->
+    <button class="reset-btn" id="resetBtn" onclick="resetAll()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+      Reset
+    </button>
+
+  </div>
+</div>
+
 <script>
-
-/* ════════════════════════════════
+/* ════════════════════════════════════════════════════
    CONFIG
-════════════════════════════════ */
-const PARAM_MANAGER = "manager_name";
-const PARAM_BRANCH  = "branch";
+════════════════════════════════════════════════════ */
+const PARAM_LEVEL    = 'level';     // Tableau parameter name for level
+const PARAM_SELECTED = 'selected';  // Tableau parameter name for selected value
+const MAX_NAME       = 18;
 
-let dashboard;
+/* ════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════ */
+let worksheet = null;
 
-/* ════════════════════════════════
+// Full dataset: [ { agm, region, branch } ]
+let allData   = [];
+
+// Derived unique lists
+let agms      = [];
+let regionMap = {};   // { agm → [region…] }
+let branchMap = {};   // { agm|region → [branch…] }
+
+// Current drill state
+const drill = { agm: '', region: '', branch: '', step: 0 };
+// step 0=none selected, 1=agm, 2=region, 3=branch
+
+let filterOpen = false;
+
+/* ════════════════════════════════════════════════════
    CLOCK
-════════════════════════════════ */
-function updateClock(){
+════════════════════════════════════════════════════ */
+function tick() {
+  const n = new Date();
+  document.getElementById('clockTime').textContent =
+    n.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  document.getElementById('clockDate').textContent =
+    n.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+}
+tick(); setInterval(tick, 1000);
 
-  const now = new Date();
-
-  document.getElementById("clockTime").innerText =
-    now.toLocaleTimeString("en-GB");
-
-  document.getElementById("clockDate").innerText =
-    now.toLocaleDateString("en-GB",{
-      weekday:"short",
-      day:"2-digit",
-      month:"short",
-      year:"numeric"
-    });
-
+/* ════════════════════════════════════════════════════
+   NAV
+════════════════════════════════════════════════════ */
+function navTo(page, el) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  console.log('Nav:', page);
 }
 
-updateClock();
+/* ════════════════════════════════════════════════════
+   FILTER PANEL TOGGLE
+════════════════════════════════════════════════════ */
+function toggleFilter() {
+  filterOpen = !filterOpen;
+  document.getElementById('filterPanel').classList.toggle('open', filterOpen);
+  document.getElementById('filterBtn').classList.toggle('open', filterOpen);
+}
 
-setInterval(updateClock,1000);
-
-/* ════════════════════════════════
-   INIT TABLEAU
-════════════════════════════════ */
-tableau.extensions.initializeAsync()
-
-.then(async ()=>{
-
-  dashboard =
-    tableau.extensions.dashboardContent.dashboard;
-
-  const worksheets =
-    dashboard.worksheets;
-
-  if(!worksheets.length){
-    return;
+// Close panel when clicking outside
+document.addEventListener('click', e => {
+  if (!filterOpen) return;
+  const panel = document.getElementById('filterPanel');
+  const btn   = document.getElementById('filterBtn');
+  const chip  = document.getElementById('filterChip');
+  if (!panel.contains(e.target) && !btn.contains(e.target) && !chip.contains(e.target)) {
+    filterOpen = false;
+    panel.classList.remove('open');
+    btn.classList.remove('open');
   }
+});
 
-  const ws = worksheets[0];
+/* ════════════════════════════════════════════════════
+   POPULATE SELECTS
+════════════════════════════════════════════════════ */
+function populateSelect(selId, values, placeholder) {
+  const sel = document.getElementById(selId);
+  sel.innerHTML = `<option value="">${placeholder}</option>`;
+  values.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    sel.appendChild(o);
+  });
+}
 
-  const data =
-    await ws.getSummaryDataAsync();
+function buildData(rows) {
+  agms      = [];
+  regionMap = {};
+  branchMap = {};
 
-  const columns =
-    data.columns.map(c=>c.fieldName);
-
-  const managerIndex =
-    columns.findIndex(c=>
-      c.toLowerCase().includes("manager")
-    );
-
-  const branchIndex =
-    columns.findIndex(c=>
-      c.toLowerCase().includes("branch")
-    );
-
-  const managers = new Set();
-  const branches = new Set();
-
-  data.data.forEach(r=>{
-
-    if(managerIndex>-1){
-
-      managers.add(
-        r[managerIndex].formattedValue
-      );
-
+  rows.forEach(r => {
+    const a = r.agm, re = r.region, b = r.branch;
+    if (a && !agms.includes(a)) agms.push(a);
+    if (a && re) {
+      if (!regionMap[a]) regionMap[a] = [];
+      if (!regionMap[a].includes(re)) regionMap[a].push(re);
     }
-
-    if(branchIndex>-1){
-
-      branches.add(
-        r[branchIndex].formattedValue
-      );
-
+    if (a && re && b) {
+      const k = a + '||' + re;
+      if (!branchMap[k]) branchMap[k] = [];
+      if (!branchMap[k].includes(b)) branchMap[k].push(b);
     }
-
   });
 
-  /* LOAD BRANCHES */
-  const branchFilter =
-    document.getElementById("branchFilter");
+  agms.sort();
+  Object.values(regionMap).forEach(a => a.sort());
+  Object.values(branchMap).forEach(a => a.sort());
 
-  [...branches]
-    .sort()
-    .forEach(v=>{
+  populateSelect('selAgm', agms, '— Select AGM —');
+  updateUIState();
+}
 
-      const o =
-        document.createElement("option");
+/* ════════════════════════════════════════════════════
+   UI STATE MACHINE
+════════════════════════════════════════════════════ */
+function updateUIState() {
+  const hasAgm    = !!drill.agm;
+  const hasRegion = !!drill.region;
+  const hasBranch = !!drill.branch;
 
-      o.value=v;
-      o.textContent=v;
+  // Step visibility
+  show('stepAgm',    true);
+  show('stepRegion', drill.step >= 2);
+  show('stepBranch', drill.step >= 3);
 
-      branchFilter.appendChild(o);
+  // Arrows
+  show('arrow12', drill.step >= 2);
+  show('arrow23', drill.step >= 3);
 
+  // Prompts
+  el('promptRegion').classList.toggle('visible', hasAgm  && drill.step === 1);
+  el('promptBranch').classList.toggle('visible', hasRegion && drill.step === 2);
+
+  // Reset button
+  el('resetBtn').classList.toggle('visible', hasAgm);
+
+  // Level pill
+  // level pill removed
+
+  // Filter button state
+  const filterBtn = el('filterBtn');
+  filterBtn.classList.toggle('has-filter', hasAgm);
+
+  // Breadcrumb chip
+  const chip  = el('filterChip');
+  const chipT = el('chipTxt');
+  if (hasBranch)      { chipT.textContent = drill.branch;  chip.classList.add('visible'); }
+  else if (hasRegion) { chipT.textContent = drill.region;  chip.classList.add('visible'); }
+  else if (hasAgm)    { chipT.textContent = drill.agm;     chip.classList.add('visible'); }
+  else                { chip.classList.remove('visible'); }
+
+  // Select filled styles
+  el('selAgm').classList.toggle('filled',    hasAgm);
+  el('selRegion').classList.toggle('filled', hasRegion);
+  el('selBranch').classList.toggle('filled', hasBranch);
+
+  // Filter button text
+  el('filterBtnTxt').textContent = hasAgm ? 'Filtered' : 'Filters';
+}
+
+function show(id, visible) {
+  const e = document.getElementById(id);
+  e.classList.toggle('visible', visible);
+}
+function el(id) { return document.getElementById(id); }
+
+/* ════════════════════════════════════════════════════
+   DRILL HANDLERS
+════════════════════════════════════════════════════ */
+function onAgmChange() {
+  drill.agm    = el('selAgm').value;
+  drill.region = '';
+  drill.branch = '';
+  drill.step   = drill.agm ? 1 : 0;
+
+  // Reset downstream selects
+  populateSelect('selRegion', [], '— Select Region —');
+  populateSelect('selBranch', [], '— Select Branch —');
+
+  updateUIState();
+
+  if (drill.agm) {
+    setParams('AGM', drill.agm);
+  } else {
+    setParams('ALL', 'ALL');
+  }
+}
+
+function drillToRegion() {
+  if (!drill.agm) return;
+  drill.step = 2;
+  const regions = regionMap[drill.agm] || [];
+  populateSelect('selRegion', regions, '— Select Region —');
+  updateUIState();
+}
+
+function onRegionChange() {
+  drill.region = el('selRegion').value;
+  drill.branch = '';
+  populateSelect('selBranch', [], '— Select Branch —');
+
+  if (drill.region) {
+    setParams('REGION', drill.region);
+  } else {
+    setParams('AGM', drill.agm);
+  }
+  updateUIState();
+}
+
+function drillToBranch() {
+  if (!drill.region) return;
+  drill.step = 3;
+  const key = drill.agm + '||' + drill.region;
+  const branches = branchMap[key] || [];
+  populateSelect('selBranch', branches, '— Select Branch —');
+  updateUIState();
+}
+
+function onBranchChange() {
+  drill.branch = el('selBranch').value;
+  if (drill.branch) {
+    setParams('BRANCH', drill.branch);
+  } else {
+    setParams('REGION', drill.region);
+  }
+  updateUIState();
+}
+
+function resetAll() {
+  drill.agm = ''; drill.region = ''; drill.branch = ''; drill.step = 0;
+  el('selAgm').value    = '';
+  el('selRegion').value = '';
+  el('selBranch').value = '';
+  populateSelect('selRegion', [], '— Select Region —');
+  populateSelect('selBranch', [], '— Select Branch —');
+  setParams('ALL', 'ALL');
+  updateUIState();
+}
+
+/* ════════════════════════════════════════════════════
+   TABLEAU PARAMETERS
+════════════════════════════════════════════════════ */
+async function setParams(level, selected) {
+  if (!worksheet) return;
+  try {
+    const params = await worksheet.getParametersAsync();
+    console.log('Params available:', params.map(p=>p.name));
+
+    const pLevel = params.find(p => p.name === PARAM_LEVEL);
+    const pSel   = params.find(p => p.name === PARAM_SELECTED);
+
+    if (pLevel)  await pLevel.changeValueAsync(level);
+    else console.warn(`Parameter "${PARAM_LEVEL}" not found`);
+
+    if (pSel)    await pSel.changeValueAsync(selected);
+    else console.warn(`Parameter "${PARAM_SELECTED}" not found`);
+
+    console.log(`✓ ${PARAM_LEVEL}="${level}" | ${PARAM_SELECTED}="${selected}"`);
+  } catch (err) {
+    console.error('setParams error:', err);
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   FETCH HIERARCHY DATA FROM TABLEAU
+════════════════════════════════════════════════════ */
+function findField(keys, ...needles) {
+  for (const n of needles) {
+    const e = keys.find(k => k.toLowerCase() === n.toLowerCase());
+    if (e) return e;
+    const s = keys.find(k => k.toLowerCase().includes(n.toLowerCase()));
+    if (s) return s;
+  }
+  return null;
+}
+
+async function fetchHierarchy(ws) {
+  try {
+    const reader = await ws.getSummaryDataReaderAsync(undefined, { ignoreSelection: true });
+    let rows = [];
+    for (let i = 0; i < reader.pageCount; i++) {
+      const page = await reader.getPageAsync(i);
+      const keys = page.columns.map(c => c.fieldName);
+
+      const agmKey    = findField(keys, 'agm', 'area general manager');
+      const regionKey = findField(keys, 'region', 'regional');
+      const branchKey = findField(keys, 'branch', 'branchname', 'branch name');
+
+      console.log('Hierarchy fields:', { agmKey, regionKey, branchKey });
+
+      page.data.forEach(row => {
+        const get = key => {
+          if (!key) return '';
+          const idx = keys.indexOf(key);
+          if (idx === -1) return '';
+          return (row[idx].formattedValue || String(row[idx].nativeValue || '')).trim();
+        };
+        rows.push({ agm: get(agmKey), region: get(regionKey), branch: get(branchKey) });
+      });
+    }
+    await reader.releaseAsync();
+    return rows;
+  } catch (err) {
+    console.warn('fetchHierarchy error:', err.message);
+    return [];
+  }
+}
+
+async function fetchUser(ws) {
+  try {
+    const reader = await ws.getSummaryDataReaderAsync(undefined, { ignoreSelection: true });
+    const page   = await reader.getPageAsync(0);
+    await reader.releaseAsync();
+    if (!page.data.length) return null;
+    const keys = page.columns.map(c => c.fieldName);
+    const row  = page.data[0];
+    const get = (...needles) => {
+      const k = findField(keys, ...needles);
+      if (!k) return null;
+      const i = keys.indexOf(k);
+      return (row[i].formattedValue || String(row[i].nativeValue || '')).trim() || null;
+    };
+    return {
+      name:     get('user name','username','user','login name','login'),
+      role:     get('user role','role','department','designation','title','dept'),
+      imageUrl: get('user image','image','photo','avatar','picture','profilepic')
+    };
+  } catch { return null; }
+}
+
+/* ════════════════════════════════════════════════════
+   USER CHIP
+════════════════════════════════════════════════════ */
+function trunc(s, n) {
+  if (!s) return '';
+  return s.length > n ? s.slice(0, n).trimEnd() + '…' : s;
+}
+function initials(n) {
+  if (!n) return '?';
+  const p = n.trim().split(/\s+/).filter(Boolean);
+  return p.length === 1 ? p[0].slice(0,2).toUpperCase() : (p[0][0]+p[p.length-1][0]).toUpperCase();
+}
+function renderUser({ name, role, imageUrl }) {
+  const ne = el('userName'), re = el('userRole');
+  ne.classList.remove('skel','skel-name');
+  re.classList.remove('skel','skel-role');
+  ne.textContent = trunc(name || 'Treasury User', MAX_NAME);
+  re.textContent = trunc(role || '', 22);
+  el('userChip').title = name || '';
+
+  const av = el('avatarEl');
+  const sk = document.getElementById('avSkel');
+  if (sk) sk.remove();
+  av.innerHTML = '';
+  if (imageUrl && imageUrl.startsWith('http')) {
+    const img = document.createElement('img');
+    img.src = imageUrl; img.alt = initials(name);
+    img.onerror = () => { img.remove(); av.textContent = initials(name); };
+    av.appendChild(img);
+  } else {
+    av.textContent = initials(name);
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════ */
+window.onload = function () {
+  tableau.extensions.initializeAsync()
+    .then(async () => {
+      worksheet = tableau.extensions.worksheetContent.worksheet;
+      console.log('Navbar on worksheet:', worksheet.name);
+
+      // Load hierarchy + user in parallel
+      const [rows, user] = await Promise.all([
+        fetchHierarchy(worksheet),
+        fetchUser(worksheet)
+      ]);
+
+      buildData(rows);
+      renderUser(user || { name: 'Treasury User', role: 'Analyst', imageUrl: null });
+
+      // Re-load on data change
+      worksheet.addEventListener(
+        tableau.TableauEventType.SummaryDataChanged,
+        async () => {
+          const [r, u] = await Promise.all([fetchHierarchy(worksheet), fetchUser(worksheet)]);
+          buildData(r);
+          if (u) renderUser(u);
+        }
+      );
+    })
+    .catch(err => {
+      console.warn('Standalone mode:', err.message);
+      // Demo data for preview
+      buildData([
+        {agm:'AGM North',  region:'Northern', branch:'Jaffna'},
+        {agm:'AGM North',  region:'Northern', branch:'Vavuniya'},
+        {agm:'AGM North',  region:'Eastern',  branch:'Trincomalee'},
+        {agm:'AGM Central',region:'Central',  branch:'Kandy'},
+        {agm:'AGM Central',region:'Central',  branch:'Matale'},
+        {agm:'AGM Central',region:'Uva',      branch:'Badulla'},
+        {agm:'AGM South',  region:'Southern', branch:'Galle'},
+        {agm:'AGM South',  region:'Southern', branch:'Matara'},
+        {agm:'AGM West',   region:'Western',  branch:'Colombo 01'},
+        {agm:'AGM West',   region:'Western',  branch:'Colombo 03'},
+        {agm:'AGM West',   region:'Sabaragamuwa', branch:'Ratnapura'},
+      ]);
+      renderUser({ name: 'Treasury User', role: 'Analyst', imageUrl: null });
     });
-
-  /* LOAD MANAGERS */
-  const managerFilter =
-    document.getElementById("managerFilter");
-
-  [...managers]
-    .sort()
-    .forEach(v=>{
-
-      const o =
-        document.createElement("option");
-
-      o.value=v;
-      o.textContent=v;
-
-      managerFilter.appendChild(o);
-
-    });
-
-});
-
-/* ════════════════════════════════
-   FILTER EVENTS
-════════════════════════════════ */
-document.getElementById("branchFilter")
-
-.addEventListener("change",
-
-async function(){
-
-  const value = this.value;
-
-  const params =
-    await dashboard.getParametersAsync();
-
-  const p =
-    params.find(x=>x.name===PARAM_BRANCH);
-
-  if(p){
-
-    await p.changeValueAsync(
-      value || "ALL"
-    );
-
-  }
-
-  document.getElementById("branchName")
-    .innerText = value || "All Branches";
-
-});
-
-/* MANAGER */
-document.getElementById("managerFilter")
-
-.addEventListener("change",
-
-async function(){
-
-  const value = this.value;
-
-  const params =
-    await dashboard.getParametersAsync();
-
-  const p =
-    params.find(x=>x.name===PARAM_MANAGER);
-
-  if(p){
-
-    await p.changeValueAsync(
-      value || "ALL"
-    );
-
-  }
-
-  document.getElementById("managerName")
-    .innerText = value || "Manager";
-
-  /* AVATAR */
-  if(value){
-
-    const initials =
-      value
-      .split(" ")
-      .map(x=>x[0])
-      .join("")
-      .substring(0,2);
-
-    document.getElementById("avatar")
-      .innerText = initials;
-
-  }
-
-});
-
+};
 </script>
-
 </body>
 </html>
