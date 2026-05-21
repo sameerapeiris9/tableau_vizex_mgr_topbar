@@ -441,7 +441,7 @@ html, body {
 
   <!-- Title -->
   <div class="title-wrap" style="padding:0 14px;">
-    <div class="title-main">Cash Position Analyzer</div>
+    <div class="title-main">KPI</div>
     
   </div>
 
@@ -455,11 +455,11 @@ html, body {
     </button>
     <button class="nav-btn" data-page="limits" onclick="navTo('limits',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      Limits
+      Summary
     </button>
     <button class="nav-btn" data-page="position" onclick="navTo('position',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      Position
+      new
     </button>
   </nav>
 
@@ -911,7 +911,7 @@ function renderUser({ name, role, imageUrl }) {
   const ne = el('userName'), re = el('userRole');
   ne.classList.remove('skel','skel-name');
   re.classList.remove('skel','skel-role');
-  ne.textContent = trunc(name || 'Treasury User', MAX_NAME);
+  ne.textContent = trunc(name || ' User', MAX_NAME);
   re.textContent = trunc(role || '', 22);
   el('userChip').title = name || '';
 
@@ -945,7 +945,7 @@ window.onload = function () {
       ]);
 
       buildData(rows);
-      renderUser(user || { name: 'Treasury User', role: 'Analyst', imageUrl: null });
+      renderUser(user || { name: ' User', role: '', imageUrl: null });
 
       // Re-load on data change
       worksheet.addEventListener(
