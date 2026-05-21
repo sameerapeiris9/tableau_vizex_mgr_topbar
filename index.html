@@ -911,7 +911,7 @@ function renderUser({ name, role, imageUrl }) {
   const ne = el('userName'), re = el('userRole');
   ne.classList.remove('skel','skel-name');
   re.classList.remove('skel','skel-role');
-  ne.textContent = trunc(name || 'Treasury User', MAX_NAME);
+  ne.textContent = trunc(name || '', MAX_NAME);
   re.textContent = trunc(role || '', 22);
   el('userChip').title = name || '';
 
@@ -973,7 +973,7 @@ window.onload = function () {
         {agm:'AGM West',   region:'Western',  branch:'Colombo 03'},
         {agm:'AGM West',   region:'Sabaragamuwa', branch:'Ratnapura'},
       ]);
-      renderUser({ name: 'Treasury User', role: 'Analyst', imageUrl: null });
+      renderUser({ name: '', role: '', imageUrl: null });
     });
 };
 </script>
